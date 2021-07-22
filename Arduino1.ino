@@ -58,11 +58,7 @@ void setup()
 
 void loop()
 {
-  // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
-  if (sensorTimer < millis() || millis() < (sensorTimer - sensorTimerDelay))
-  {
     checkAllSensors();
-  }
 }
 
 void checkAllSensors()
@@ -89,7 +85,7 @@ void checkAllSensors()
   }
 
   //Moverse
-  sensorTimer = millis() + sensorTimerDelay;
+  
 }
 
 void SensorCheckUltraSound(int _pinSet[2])
@@ -103,10 +99,5 @@ void SensorCheckUltraSound(int _pinSet[2])
   distanciaSensor = duracionPulso / sensorConstant;
 
   //Serial.println(distanciaSensor);
-}
-
-void SensorCheckInfraRed()
-{
-  //code
 }
 

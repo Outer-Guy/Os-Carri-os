@@ -10,9 +10,9 @@ int ultrasoundPinPairs[3][2] = {
 
 //Los pines que controlan el motor, el primer pin controla la direccion hacia adelante,
 //el segundo hacia atras, el tercero controla la velocidad y debe ser un PWM
-int motorPins[2][3] ={
-        {},
-        {},
+int motorPins[2][3] = {
+    {},
+    {},
 };
 
 /*
@@ -49,6 +49,8 @@ short distanciaSensor;
 long sensorTimer = 0;
 
 #pragma region TestingVariables
+// Delay entre medición y medición del sensor de ultra sonido
+int sensorTimerDelay = 100;
 //Constante de transformación de medida del sensor de ultrasonido
 short sensorConstant = 58.2;
 //Distancia minima en centimetros antes de detectar una unidad
@@ -61,7 +63,7 @@ void setup()
 {
 
   Serial.begin(9600);
-  
+
   //Sensores de Ultrasonido: Por cada lista en la matriz se revisara los primeros dos valores y los activara como pines
   for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
   {
@@ -98,6 +100,16 @@ void setup()
 
 void loop()
 {
+  ArtificialIntelligence();
+
+  // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
+  if (sensorTimer - millis() < sensorTimer - sensorTimerDelay)
+  {
+    checkAllSensors();
+  }
+}
+void ArtificialIntelligence()
+{
   switch (Working)
   {
   case quieto:
@@ -116,14 +128,7 @@ void loop()
   default:
     break;
   }
-  // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
-  if (sensorTimer > millis())
-  {
-    checkAllSensors();
-  }
-
 }
-
 
 void checkAllSensors()
 {
@@ -133,32 +138,22 @@ void checkAllSensors()
   {
     SensorCheckUltraSound(ultrasoundPinPairs[_iArray]);
 
-    if(distanciaSensor < distanciaMinima)
+    if (distanciaSensor < distanciaColision)
     {
-
+      Working = precaucion;
     }
-
-    
-      if (distanciaSensor < distanciaColision)
-      {
-        
-        MotorBase(0,retroceder,0.5);
-        MotorBase(1, retroceder, 0.5);
-      }
-      else
-      {
-        
-        MotorBase(0, detenerse, 0);
-        MotorBase(1, detenerse, 0);
-      }
-
-      SensorCheckUltraSound(ultrasoundPinPairs[0]);
-    
+    else if (distanciaSensor < distanciaMinima)
+    {
+      Working = detenido;
+    }
+    else
+    {
+      Working = moviendose;
+    }
   }
 
-  MotorBase(0, avanzar, 1);
-  MotorBase(1, avanzar, 1);
   sensorTimer = millis();
+
 }
 
 void SensorCheckUltraSound(int _pinSet[2])
@@ -176,12 +171,12 @@ void SensorCheckUltraSound(int _pinSet[2])
 
 void SensorCheckInfraRed()
 {
-    //code
+  //code
 }
 
 //REVISAR CON MOTOR
 //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
-void MotorBase(int _motorNumber,MotorState _changeMotorState,short _motorSpeed)
+void MotorBase(int _motorNumber, MotorState _changeMotorState, short _motorSpeed)
 {
   int _realMotorSpeed = _motorSpeed * 255;
   //resetea la direccion del motor

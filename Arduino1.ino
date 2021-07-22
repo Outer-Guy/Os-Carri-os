@@ -15,22 +15,32 @@ int motorPins[2][3] ={
         {},
 };
 
-
+/*
 enum RobotState
 {
-  Libre,
-  Ocupado,
-  Buscando_Cargador,
-  Evitando_Colision,
+  libre,
+  ocupado,
+  buscando_Cargador,
 };
 
-RobotState MyState = Libre;
+RobotState myState = Libre;
+*/
+
+enum Routine
+{
+  quieto,
+  moviendose,
+  detenido,
+  precaucion,
+};
+
+Routine Working = quieto;
 
 enum MotorState
 {
-  Avanzar,
-  Detenerse,
-  Retroceder,
+  avanzar,
+  detenerse,
+  retroceder,
 };
 
 short distanciaSensor;
@@ -90,31 +100,30 @@ void setup()
 
 void loop()
 {
-  switch (MyState)
+  switch (Working)
   {
-  case Libre:
+  case quieto:
     /* code */
     break;
-  case Ocupado:
+  case moviendose:
     /* code */
     break;
-  case Buscando_Cargador:
+  case detenido:
     /* code */
     break;
-  case Evitando_Colision:
+  case precaucion:
     /* code */
     break;
-  
+
   default:
-    MyState = Libre;
     break;
   }
-  
   // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
   if (sensorTimer > millis() - 100)
   {
     checkAllSensors();
   }
+
 }
 
 
@@ -126,27 +135,31 @@ void checkAllSensors()
   {
     SensorCheckUltraSound(ultrasoundPinPairs[_iArray]);
 
-    while (distanciaSensor < distanciaMinima)
+    if(distanciaSensor < distanciaMinima)
     {
+
+    }
+
+    
       if (distanciaSensor < distanciaColision)
       {
         
-        MotorBase(0,Retroceder,0.5);
-        MotorBase(1, Retroceder, 0.5);
+        MotorBase(0,retroceder,0.5);
+        MotorBase(1, retroceder, 0.5);
       }
       else
       {
         
-        MotorBase(0, Detenerse, 0);
-        MotorBase(1, Detenerse, 0);
+        MotorBase(0, detenerse, 0);
+        MotorBase(1, detenerse, 0);
       }
 
       SensorCheckUltraSound(ultrasoundPinPairs[0]);
-    }
+    
   }
 
-  MotorBase(0, Avanzar, 1);
-  MotorBase(1, Avanzar, 1);
+  MotorBase(0, avanzar, 1);
+  MotorBase(1, avanzar, 1);
   sensorTimer = millis() + sensorTimerDelay;
 }
 
@@ -180,16 +193,16 @@ void MotorBase(int _motorNumber,MotorState _changeMotorState,short _motorSpeed)
   //cuando deberia encenderse 0 y cuando 1 depende de cual gire en que dirección.
   switch (_changeMotorState)
   {
-  case Avanzar:
+  case avanzar:
     digitalWrite(motorPins[_motorNumber][1], HIGH);
     analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
     break;
 
-  case Detenerse:
+  case detenerse:
     analogWrite(motorPins[_motorNumber][2], 0);
     break;
 
-  case Retroceder:
+  case retroceder:
     digitalWrite(motorPins[_motorNumber][0], HIGH);
     analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
     break;

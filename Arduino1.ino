@@ -1,15 +1,28 @@
 
 //Esta matriz guarda informacion de los sensores,
 //los primeros dos pines deben ser trigger y echo respectivamente
-// sensorPinPair [n°deSensor] === {pinTrigger, pinEcho}
-int sensorPinPair[3][2] = {
+// ultrasoundPinPairs [n°deSensor] === {pinTrigger, pinEcho}
+int ultrasoundPinPairs[3][2] = {
     {7, 8},
     {2, 4},
     {12, 13},
 };
 
-short distanciaSensor;
+//Los pines que controlan el motor, el primer pin controla la direccion hacia adelante,
+//el segundo hacia atras, el tercero controla la velocidad y debe ser un PWM
+int motorPins[2][3] ={
+        {},
+        {},
+};
 
+enum MotorState
+{
+  Avanzar,
+  Detenerse,
+  Retroceder
+};
+
+short distanciaSensor;
 
 // Variable auxiliar para el timer del sensor de ultra sonido
 long sensorTimer = 0;
@@ -30,11 +43,11 @@ void setup()
 
   Serial.begin(9600);
   
-  //Por cada lista en la matriz se revisara los primeros dos valores y los activara como pines
-  for (int _iArray = 0; _iArray < sizeof(sensorPinPair) / sizeof(sensorPinPair[_iArray]); _iArray++)
+  //Sensores de Ultrasonido: Por cada lista en la matriz se revisara los primeros dos valores y los activara como pines
+  for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
   {
     int _tempBool = 0;
-    for (int _i = 0; _i < sizeof(sensorPinPair[_iArray]) / sizeof(sensorPinPair[_iArray][_i]); _i++)
+    for (int _i = 0; _i < sizeof(ultrasoundPinPairs[_iArray]) / sizeof(ultrasoundPinPairs[_iArray][_i]); _i++)
     {
 
       switch (_tempBool)
@@ -54,6 +67,14 @@ void setup()
       }
     }
   }
+
+  //Controlador de motores toma 3 valores por array
+  for (int _iArray = 0; _iArray < sizeof(motorPins) / sizeof(motorPins[_iArray]); _iArray++)
+  {
+    pinMode(motorPins[_iArray][0], OUTPUT);
+    pinMode(motorPins[_iArray][1], OUTPUT);
+    pinMode(motorPins[_iArray][2], OUTPUT);
+  }
 }
 
 void loop()
@@ -69,26 +90,29 @@ void checkAllSensors()
 {
   //Revisar que los sensores no detecten a otro robot cerca
   //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
-  for (int _iArray = 0; _iArray < sizeof(sensorPinPair) / sizeof(sensorPinPair[_iArray]); _iArray++)
+  for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
   {
-    SensorCheckUltraSound(sensorPinPair[_iArray]);
+    SensorCheckUltraSound(ultrasoundPinPairs[_iArray]);
 
     while (distanciaSensor < distanciaMinima)
     {
       if (distanciaSensor < distanciaColision)
       {
-          //Motor_retroceder
+        MotorBase(0,MotorState(2),127);
+        MotorBase(1, MotorState(2), 127);
       }
       else
       {
-          //Motor_detenerse
+        MotorBase(0, MotorState(1), 0);
+        MotorBase(1, MotorState(1), 0);
       }
 
-      SensorCheckUltraSound(sensorPinPair[0]);
+      SensorCheckUltraSound(ultrasoundPinPairs[0]);
     }
   }
 
-    //Moverse
+  MotorBase(0, MotorState(1), 255);
+  MotorBase(1, MotorState(1), 255);
   sensorTimer = millis() + sensorTimerDelay;
 }
 
@@ -110,3 +134,34 @@ void SensorCheckInfraRed()
     //code
 }
 
+//REVISAR CON MOTOR
+//Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es 0-255
+void MotorBase(int MotorNumber,MotorState _changeMotorState,int MotorSpeed)
+{
+  //resetea la direccion del motor
+  digitalWrite(motorPins[MotorNumber][0], LOW);
+  digitalWrite(motorPins[MotorNumber][1], LOW);
+
+  //cuando deberia encenderse 0 y cuando 1 depende de cual gire en que dirección.
+  switch (_changeMotorState)
+  {
+  case MotorState(0):
+    digitalWrite(motorPins[MotorNumber][1], HIGH);
+    analogWrite(motorPins[MotorNumber][2], MotorSpeed);
+    break;
+
+  case MotorState(1):
+    analogWrite(motorPins[MotorNumber][2], 0);
+    break;
+
+  case MotorState(2):
+    digitalWrite(motorPins[MotorNumber][0], HIGH);
+    analogWrite(motorPins[MotorNumber][2], MotorSpeed);
+    break;
+
+  default:
+    break;
+  }
+
+  
+}

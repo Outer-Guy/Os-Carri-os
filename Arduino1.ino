@@ -13,8 +13,6 @@ short distanciaSensor;
 
 // Variable auxiliar para el timer del sensor de ultra sonido
 long sensorTimer = 0;
-// Delay entre medición y medición del sensor de ultra sonido
-int sensorTimerDelay = 100;
 
 #pragma region TestingVariables
 //Constante de transformación de medida del sensor de ultrasonido

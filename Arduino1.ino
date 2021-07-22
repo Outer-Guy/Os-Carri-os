@@ -45,10 +45,8 @@ enum MotorState
 
 short distanciaSensor;
 
-// Variable auxiliar para el timer del sensor de ultra sonido
+// Variable auxiliar para el timer de la medicion de los sensores
 long sensorTimer = 0;
-// Delay entre medición y medición del sensor de ultra sonido
-int sensorTimerDelay = 100;
 
 #pragma region TestingVariables
 //Constante de transformación de medida del sensor de ultrasonido
@@ -119,7 +117,7 @@ void loop()
     break;
   }
   // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
-  if (sensorTimer > millis() - 100)
+  if (sensorTimer > millis())
   {
     checkAllSensors();
   }
@@ -160,7 +158,7 @@ void checkAllSensors()
 
   MotorBase(0, avanzar, 1);
   MotorBase(1, avanzar, 1);
-  sensorTimer = millis() + sensorTimerDelay;
+  sensorTimer = millis();
 }
 
 void SensorCheckUltraSound(int _pinSet[2])

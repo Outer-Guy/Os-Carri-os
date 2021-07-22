@@ -59,7 +59,7 @@ void setup()
 void loop()
 {
   // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
-  if (sensorTimer < millis() || millis() < (sensorTimer - sensorTimerDelay))
+  if (sensorTimer > millis() - 100)
   {
     checkAllSensors();
   }
@@ -68,7 +68,7 @@ void loop()
 void checkAllSensors()
 {
   //Revisar que los sensores no detecten a otro robot cerca
-  //por cada sensor en la matriz, revisar del primero al ultimo
+  //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
   for (int _iArray = 0; _iArray < sizeof(sensorPinPair) / sizeof(sensorPinPair[_iArray]); _iArray++)
   {
     SensorCheckUltraSound(sensorPinPair[_iArray]);
@@ -77,18 +77,18 @@ void checkAllSensors()
     {
       if (distanciaSensor < distanciaColision)
       {
-        //Motor_retroceder
+          //Motor_retroceder
       }
       else
       {
-        //Motor_detenerse
+          //Motor_detenerse
       }
 
       SensorCheckUltraSound(sensorPinPair[0]);
     }
   }
 
-  //Moverse
+    //Moverse
   sensorTimer = millis() + sensorTimerDelay;
 }
 
@@ -107,6 +107,6 @@ void SensorCheckUltraSound(int _pinSet[2])
 
 void SensorCheckInfraRed()
 {
-  //code
+    //code
 }
 

@@ -15,11 +15,22 @@ int motorPins[2][3] ={
         {},
 };
 
+
+enum RobotState
+{
+  Libre,
+  Ocupado,
+  Buscando_Cargador,
+  Evitando_Colision,
+};
+
+RobotState MyState = Libre;
+
 enum MotorState
 {
   Avanzar,
   Detenerse,
-  Retroceder
+  Retroceder,
 };
 
 short distanciaSensor;
@@ -79,12 +90,33 @@ void setup()
 
 void loop()
 {
+  switch (MyState)
+  {
+  case Libre:
+    /* code */
+    break;
+  case Ocupado:
+    /* code */
+    break;
+  case Buscando_Cargador:
+    /* code */
+    break;
+  case Evitando_Colision:
+    /* code */
+    break;
+  
+  default:
+    MyState = Libre;
+    break;
+  }
+  
   // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
   if (sensorTimer > millis() - 100)
   {
     checkAllSensors();
   }
 }
+
 
 void checkAllSensors()
 {
@@ -98,21 +130,23 @@ void checkAllSensors()
     {
       if (distanciaSensor < distanciaColision)
       {
-        MotorBase(0,MotorState(2),127);
-        MotorBase(1, MotorState(2), 127);
+        
+        MotorBase(0,Retroceder,0.5);
+        MotorBase(1, Retroceder, 0.5);
       }
       else
       {
-        MotorBase(0, MotorState(1), 0);
-        MotorBase(1, MotorState(1), 0);
+        
+        MotorBase(0, Detenerse, 0);
+        MotorBase(1, Detenerse, 0);
       }
 
       SensorCheckUltraSound(ultrasoundPinPairs[0]);
     }
   }
 
-  MotorBase(0, MotorState(1), 255);
-  MotorBase(1, MotorState(1), 255);
+  MotorBase(0, Avanzar, 1);
+  MotorBase(1, Avanzar, 1);
   sensorTimer = millis() + sensorTimerDelay;
 }
 
@@ -135,33 +169,32 @@ void SensorCheckInfraRed()
 }
 
 //REVISAR CON MOTOR
-//Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es 0-255
-void MotorBase(int MotorNumber,MotorState _changeMotorState,int MotorSpeed)
+//Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
+void MotorBase(int _motorNumber,MotorState _changeMotorState,short _motorSpeed)
 {
+  int _realMotorSpeed = _motorSpeed * 255;
   //resetea la direccion del motor
-  digitalWrite(motorPins[MotorNumber][0], LOW);
-  digitalWrite(motorPins[MotorNumber][1], LOW);
+  digitalWrite(motorPins[_motorNumber][0], LOW);
+  digitalWrite(motorPins[_motorNumber][1], LOW);
 
   //cuando deberia encenderse 0 y cuando 1 depende de cual gire en que dirección.
   switch (_changeMotorState)
   {
-  case MotorState(0):
-    digitalWrite(motorPins[MotorNumber][1], HIGH);
-    analogWrite(motorPins[MotorNumber][2], MotorSpeed);
+  case Avanzar:
+    digitalWrite(motorPins[_motorNumber][1], HIGH);
+    analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
     break;
 
-  case MotorState(1):
-    analogWrite(motorPins[MotorNumber][2], 0);
+  case Detenerse:
+    analogWrite(motorPins[_motorNumber][2], 0);
     break;
 
-  case MotorState(2):
-    digitalWrite(motorPins[MotorNumber][0], HIGH);
-    analogWrite(motorPins[MotorNumber][2], MotorSpeed);
+  case Retroceder:
+    digitalWrite(motorPins[_motorNumber][0], HIGH);
+    analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
     break;
 
   default:
     break;
   }
-
-  
 }

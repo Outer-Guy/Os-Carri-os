@@ -1,4 +1,5 @@
 
+#pragma region PinVariables
 //Esta matriz guarda informacion de los sensores,
 //los primeros dos pines deben ser trigger y echo respectivamente
 // ultrasoundPinPairs [n°deSensor] === {pinTrigger, pinEcho}
@@ -27,20 +28,11 @@ int MyState[3] = {
     {libre},
     {esperando},
     {perdido},
-
 };
+
+#pragma endregion
 
 #pragma region EnumStates
-//el robot puede estar:
-//-libre
-//-ocupado llendo a algun lado
-// o buscando un cargador
-enum RobotStatus
-{
-  libre,
-  ocupado,
-  buscando_Cargador,
-};
 
 //las variables que maneja la IA en myState:
 //-estado
@@ -52,6 +44,18 @@ enum RobotState
   objetivo,
   direccion,
 };
+
+//el robot puede estar:
+//-libre
+//-ocupado llendo a algun lado
+// o buscando un cargador
+enum RobotStatus
+{
+  libre,
+  ocupado,
+  buscando_Cargador,
+};
+
 
 //los diferentes objetivos del robot:
 //-esperando
@@ -68,13 +72,6 @@ enum RobotActions
   buscando,
 };
 
-enum MotorDirection
-{
-  avanzar,
-  detenerse,
-  retroceder,
-};
-
 enum RobotDirection
 {
   adelante,
@@ -82,6 +79,13 @@ enum RobotDirection
   derecha,
   cruce,
   perdido,
+};
+
+enum MotorDirection
+{
+  avanzar,
+  detenerse,
+  retroceder,
 };
 
 #pragma endregion
@@ -158,11 +162,12 @@ void loop()
     break;
 
   case ocupado:
-    if (sensorTimer + millis() > sensorTimer + sensorTimerDelay)
+    if (sensorTimer - millis() < sensorTimer - sensorTimerDelay)
     {
       ArtificialIntelligence();
       sensorTimer = millis();
     }
+    delay(10);
     break;
 
   default:
@@ -195,6 +200,7 @@ void ArtificialIntelligence()
     {
       ChangeMotorDirection();
     }
+    break;
   case evasión:
     if (CheckUltraSoundStep() == true)
     {
@@ -370,7 +376,7 @@ void ChangeMotorDirection()
 
     //REVISAR CON MOTOR
     //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
-    void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
+void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
 {
   int _realMotorSpeed = _motorSpeed * 255;
   //resetea la direccion del motor

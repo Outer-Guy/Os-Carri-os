@@ -56,7 +56,6 @@ enum RobotStatus
   buscando_Cargador,
 };
 
-
 //los diferentes objetivos del robot:
 //-esperando
 //-moviendose (en alguna dirección)
@@ -229,7 +228,7 @@ void ArtificialIntelligence()
 //returns true if the value changed
 bool CheckUltraSoundStep()
 {
-  RobotActions _newState;
+  RobotActions _newState[3];
   //Revisar que los sensores no detecten a otro robot cerca
   //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
   for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
@@ -238,24 +237,28 @@ bool CheckUltraSoundStep()
 
     if (distanciaSensor < distanciaColision)
     {
-      MyState[objetivo] = evasión;
+      _newState[_iArray] = evasión;
     }
     else if (distanciaSensor < distanciaMinima)
     {
-      MyState[objetivo] = detenido;
+      _newState[_iArray] = detenido;
     }
     else
     {
-      MyState[objetivo] = moverse;
+      _newState[_iArray] = moverse;
     }
   }
-  if (_newState != MyState[objetivo])
+  for (int _iArray = 0; _iArray < sizeof(_newState) / sizeof(_newState[_iArray]); _iArray++)
   {
-    return true;
-  }
-  else
-  {
-    return false;
+    if (_newState[_iArray] != MyState[objetivo])
+    {
+      MyState[objetivo] = _newState[_iArray];
+      return true;
+    }
+    else
+    {
+      return false;
+    }
   }
 }
 
@@ -374,8 +377,8 @@ void ChangeMotorDirection()
   }
 }
 
-    //REVISAR CON MOTOR
-    //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
+//REVISAR CON MOTOR
+//Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
 void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
 {
   int _realMotorSpeed = _motorSpeed * 255;

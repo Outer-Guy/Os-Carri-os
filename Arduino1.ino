@@ -7,7 +7,11 @@ int ultrasoundPinPairs[3][2] = {
     {2, 4},
     {12, 13},
 };
-
+int infraredPins[3] = {
+    {},
+    {},
+    {},
+};
 //Los pines que controlan el motor, el primer pin controla la direccion hacia adelante,
 //el segundo hacia atras, el tercero controla la velocidad y debe ser un PWM
 int motorPins[2][3] = {
@@ -15,35 +19,72 @@ int motorPins[2][3] = {
     {},
 };
 
-/*
-enum RobotState
+//Estado general del robot
+//[0]: Estado del robot visto online
+//[1]: Objetivo del robot, dado por el sensor de ultrasonido evitando otros robots, o moviendose
+//[2]: Dirección como la da el sensor infrarojo
+int MyState[3] = {
+    {libre},
+    {esperando},
+    {perdido},
+
+};
+
+#pragma region EnumStates
+//el robot puede estar:
+//-libre
+//-ocupado llendo a algun lado
+// o buscando un cargador
+enum RobotStatus
 {
   libre,
   ocupado,
   buscando_Cargador,
 };
 
-RobotState myState = Libre;
-*/
-
-enum Routine
+//las variables que maneja la IA en myState:
+//-estado
+//-objetivo  (robot actions)
+//-direccion
+enum RobotState
 {
-  quieto,
-  moviendose,
-  detenido,
-  precaucion,
+  estado,
+  objetivo,
+  direccion,
 };
 
-Routine Working = quieto;
+//los diferentes objetivos del robot:
+//-esperando
+//-moviendose (en alguna dirección)
+//-detenido (esperando que otro robot pase)
+//-evasión (retrocediendo de otro robot)
+//-buscando linea
+enum RobotActions
+{
+  esperando,
+  moverse,
+  detenido,
+  evasión,
+  buscando,
+};
 
-enum MotorState
+enum MotorDirection
 {
   avanzar,
   detenerse,
   retroceder,
 };
 
-short distanciaSensor;
+enum RobotDirection
+{
+  adelante,
+  izquierda,
+  derecha,
+  cruce,
+  perdido,
+};
+
+#pragma endregion
 
 // Variable auxiliar para el timer de la medicion de los sensores
 long sensorTimer = 0;
@@ -51,7 +92,7 @@ long sensorTimer = 0;
 #pragma region TestingVariables
 // Delay entre medición y medición del sensor de ultra sonido
 int sensorTimerDelay = 100;
-//Constante de transformación de medida del sensor de ultrasonido
+//Constante de velocidad del sonido m/s
 short sensorConstant = 58.2;
 //Distancia minima en centimetros antes de detectar una unidad
 short distanciaMinima = 100;
@@ -89,6 +130,12 @@ void setup()
     }
   }
 
+  //Sensores infrarojos, cada uno tiene un solo pin
+  for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
+  {
+    pinMode(motorPins[_iArray][0], INPUT);
+  }
+
   //Controlador de motores toma 3 valores por array
   for (int _iArray = 0; _iArray < sizeof(motorPins) / sizeof(motorPins[_iArray]); _iArray++)
   {
@@ -96,33 +143,26 @@ void setup()
     pinMode(motorPins[_iArray][1], OUTPUT);
     pinMode(motorPins[_iArray][2], OUTPUT);
   }
+  delay(10);
 }
 
 void loop()
 {
-  ArtificialIntelligence();
 
-  // Chequear si el tiempo ya pasó o si el runtime se reseteó para volver a sensar las distancias
-  if (sensorTimer - millis() < sensorTimer - sensorTimerDelay)
+  switch (MyState[estado])
   {
-    checkAllSensors();
-  }
-}
-void ArtificialIntelligence()
-{
-  switch (Working)
-  {
-  case quieto:
-    /* code */
+  case libre:
+    delay(500);
+    //esperar direcciones del servidor,
+    //no se que tan bien funcione el online+delay, falta testear
     break;
-  case moviendose:
-    /* code */
-    break;
-  case detenido:
-    /* code */
-    break;
-  case precaucion:
-    /* code */
+
+  case ocupado:
+    if (sensorTimer + millis() > sensorTimer + sensorTimerDelay)
+    {
+      ArtificialIntelligence();
+      sensorTimer = millis();
+    }
     break;
 
   default:
@@ -130,53 +170,207 @@ void ArtificialIntelligence()
   }
 }
 
-void checkAllSensors()
+//REVISAR CON DIRECCIONES DEL SERVIDOR
+//la IA decide cuando actualizar los sensores y que hacer en todo momento
+void ArtificialIntelligence()
 {
+  switch (MyState[objetivo])
+  {
+  case moverse:
+
+    //si se detecta un cambio, cambiar el estado del motor
+    if (CheckUltraSoundStep() == true)
+    {
+      ChangeMotorDirection();
+    }
+
+    else if (CheckInfraRedStep() == true)
+    {
+      ChangeMotorOrientation();
+    }
+    break;
+
+  case detenido:
+    if (CheckUltraSoundStep() == true)
+    {
+      ChangeMotorDirection();
+    }
+  case evasión:
+    if (CheckUltraSoundStep() == true)
+    {
+      ChangeMotorDirection();
+    }
+    if (CheckInfraRedStep() == true)
+    {
+      //esto es lo que debe hacer el robot cuando esta retrocediendo y se sale de la linea
+    }
+    break;
+
+  case buscando:
+    //buscar el camino de vuelta
+    break;
+
+  default:
+    if (sensorTimer - millis() < sensorTimer - sensorTimerDelay)
+    {
+      CheckUltraSoundStep();
+      CheckInfraRedStep();
+    }
+    break;
+  }
+}
+
+//returns true if the value changed
+bool CheckUltraSoundStep()
+{
+  RobotActions _newState;
   //Revisar que los sensores no detecten a otro robot cerca
   //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
   for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
   {
-    SensorCheckUltraSound(ultrasoundPinPairs[_iArray]);
+    short distanciaSensor = UltraSoundPulseCheck(ultrasoundPinPairs[_iArray]);
 
     if (distanciaSensor < distanciaColision)
     {
-      Working = precaucion;
+      MyState[objetivo] = evasión;
     }
     else if (distanciaSensor < distanciaMinima)
     {
-      Working = detenido;
+      MyState[objetivo] = detenido;
     }
     else
     {
-      Working = moviendose;
+      MyState[objetivo] = moverse;
     }
   }
-
-  sensorTimer = millis();
-
+  if (_newState != MyState[objetivo])
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
-void SensorCheckUltraSound(int _pinSet[2])
+//returns true if the value changed
+bool CheckInfraRedStep()
+{
+  bool _results[3] = {};
+  RobotDirection _newState;
+
+  for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
+  {
+    _results[_iArray] = digitalRead(infraredPins[_iArray]);
+  }
+
+  if (!_results[0])
+  {
+    //nada a la izquierda
+    if (!_results[direccion])
+    {
+      //Y nada a la derecha
+      if (_results[1])
+      {
+        MyState[direccion] = adelante;
+      }
+      else
+      {
+        MyState[direccion] = perdido;
+      }
+    }
+
+    else
+    {
+      MyState[direccion] = derecha;
+    }
+  }
+  else
+  {
+    //algo a la izquierda
+    if (!_results[2])
+    {
+      if (_results[1] | !_results[1])
+      {
+        MyState[direccion] = izquierda;
+      }
+    }
+
+    else if (_results[1])
+    {
+      MyState[direccion] = cruce;
+    }
+  }
+  if (_newState != MyState[direccion])
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+short UltraSoundPulseCheck(int _pinSet[2])
 {
   digitalWrite(_pinSet[0], HIGH);
-  delay(1);
+  delayMicroseconds(100);
 
   digitalWrite(_pinSet[0], LOW);
 
   short duracionPulso = pulseIn(_pinSet[1], HIGH);
-  distanciaSensor = duracionPulso / sensorConstant;
+  return (duracionPulso / sensorConstant);
 
   //Serial.println(distanciaSensor);
 }
 
-void SensorCheckInfraRed()
+void ChangeMotorOrientation()
 {
-  //code
+  switch (MyState[direccion])
+  {
+  case adelante:
+    MotorBase(0, avanzar, 1);
+    MotorBase(1, avanzar, 1);
+    break;
+  case izquierda:
+    MotorBase(0, detenerse, 0);
+    MotorBase(1, avanzar, 1);
+    break;
+  case derecha:
+    MotorBase(0, avanzar, 1);
+    MotorBase(1, detenerse, 0);
+    break;
+  case cruce:
+    //aca deberia decidir la IA que camino tomar
+    break;
+  default:
+    break;
+  }
 }
 
-//REVISAR CON MOTOR
-//Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
-void MotorBase(int _motorNumber, MotorState _changeMotorState, short _motorSpeed)
+void ChangeMotorDirection()
+{
+  switch (MyState[objetivo])
+  {
+  case moverse:
+    ChangeMotorOrientation();
+    break;
+  case detenido:
+    MotorBase(0, detenerse, 0);
+    MotorBase(1, detenerse, 0);
+    break;
+  case evasión:
+    MotorBase(0, retroceder, 0.5);
+    MotorBase(1, retroceder, 0.5);
+    break;
+  default:
+    break;
+  }
+}
+
+    //REVISAR CON MOTOR
+    //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
+    void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
 {
   int _realMotorSpeed = _motorSpeed * 255;
   //resetea la direccion del motor

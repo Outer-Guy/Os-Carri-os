@@ -25,9 +25,9 @@ int motorPins[2][3] = {
 //[1]: Objetivo del robot, dado por el sensor de ultrasonido evitando otros robots, o moviendose
 //[2]: Dirección como la da el sensor infrarojo
 int MyState[3] = {
-    {libre},
-    {esperando},
-    {perdido},
+    {},
+    {},
+    {},
 };
 
 #pragma endregion
@@ -67,7 +67,7 @@ enum RobotActions
   esperando,
   moverse,
   detenido,
-  evasión,
+  evasion,
   buscando,
 };
 
@@ -136,7 +136,7 @@ void setup()
   //Sensores infrarojos, cada uno tiene un solo pin
   for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
   {
-    pinMode(motorPins[_iArray][0], INPUT);
+    pinMode(infraredPins[_iArray], INPUT);
   }
 
   //Controlador de motores toma 3 valores por array
@@ -146,6 +146,11 @@ void setup()
     pinMode(motorPins[_iArray][1], OUTPUT);
     pinMode(motorPins[_iArray][2], OUTPUT);
   }
+
+  MyState[estado] = libre;
+  MyState[objetivo] = esperando;
+  MyState[direccion] = perdido;
+
   delay(10);
 }
 
@@ -200,7 +205,7 @@ void ArtificialIntelligence()
       ChangeMotorDirection();
     }
     break;
-  case evasión:
+  case evasion:
     if (CheckUltraSoundStep() == true)
     {
       ChangeMotorDirection();
@@ -237,7 +242,7 @@ bool CheckUltraSoundStep()
 
     if (distanciaSensor < distanciaColision)
     {
-      _newState[_iArray] = evasión;
+      _newState[_iArray] = evasion;
     }
     else if (distanciaSensor < distanciaMinima)
     {
@@ -368,7 +373,7 @@ bool CheckUltraSoundStep()
       MotorBase(0, detenerse, 0);
       MotorBase(1, detenerse, 0);
       break;
-    case evasión:
+    case evasion:
       MotorBase(0, retroceder, 0.5);
       MotorBase(1, retroceder, 0.5);
       break;

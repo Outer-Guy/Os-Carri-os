@@ -182,6 +182,64 @@ void loop()
   }
 }
 
+//returns true if the value changed
+bool CheckInfraRedStep()
+{
+  bool _results[3] = {};
+  RobotDirection _newState;
+
+  for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
+  {
+    _results[_iArray] = digitalRead(infraredPins[_iArray]);
+  }
+
+  if (!_results[0])
+  {
+    //nada a la izquierda
+    if (!_results[2])
+    {
+      //Y nada a la derecha
+      if (_results[1])
+      {
+        _newState = adelante;
+      }
+      else
+      {
+        _newState = perdido;
+      }
+    }
+
+    else
+    {
+      _newState = derecha;
+    }
+  }
+  else
+  {
+    //algo a la izquierda
+    if (!_results[2])
+    {
+      if (_results[1] | !_results[1])
+      {
+        _newState = izquierda;
+      }
+    }
+
+    else if (_results[1])
+    {
+      _newState = cruce;
+    }
+  }
+  if (_newState != MyState[direccion])
+  {
+    MyState[direccion] = _newState;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
 short UltraSoundPulseCheck(int _pinSet[2])
 {

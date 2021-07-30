@@ -235,34 +235,32 @@ void ArtificialIntelligence()
 //returns true if the value changed
 bool CheckUltraSoundStep()
 {
-  RobotActions _sensorStates[3];
   RobotActions _newState = esperando;
+  short _distanciaFinal = distanciaMinima;
   //Revisar que los sensores no detecten a otro robot cerca
   //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
-  for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
+  for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
   {
-    short distanciaSensor = UltraSoundPulseCheck(ultrasoundPinPairs[_iArray]);
+    short distanciaSensor = analogRead(infraredPins[_iArray]);
+    if (distanciaSensor < _distanciaFinal)
+    {
+      _distanciaFinal = distanciaSensor;
+    }
+  }
 
-    if (distanciaSensor < distanciaColision)
-    {
-      _sensorStates[_iArray] = evasion;
-    }
-    else if (distanciaSensor < distanciaMinima)
-    {
-      _sensorStates[_iArray] = detenido;
-    }
-    else
-    {
-      _sensorStates[_iArray] = moverse;
-    }
-  }
-  for (int _iArray = 0; _iArray < sizeof(_sensorStates) / sizeof(_sensorStates[_iArray]); _iArray++)
+  if (_distanciaFinal < distanciaColision)
   {
-    if (RobotActions(_sensorStates[_iArray]) > RobotActions(_newState))
-    {
-      _newState = _sensorStates[_iArray];
-    }
+    _newState = evasion;
   }
+  else if (_distanciaFinal < distanciaMinima)
+  {
+    _newState = detenido;
+  }
+  else
+  {
+    _newState = moverse;
+  }
+
   if (_newState == MyState[objetivo])
   {
     return false;
@@ -273,7 +271,6 @@ bool CheckUltraSoundStep()
     return true;
   }
 }
-
 //returns true if the value changed
 bool CheckInfraRedStep()
 {

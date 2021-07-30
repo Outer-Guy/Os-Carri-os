@@ -1,3 +1,4 @@
+//se debe crear una variable indefinida y llamar esta funcion para que el compilador de arduino permita tener el codigo aca arriba
 #ifndef Variables
 #define Variables
 //Esta matriz guarda informacion de los sensores,

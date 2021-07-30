@@ -342,15 +342,15 @@ bool CheckUltraSoundStep()
     switch (MyState[direccion])
     {
     case adelante:
-      MotorBase(0, avanzar, 1);
-      MotorBase(1, avanzar, 1);
+      MotorBase(0, avanzar, 100);
+      MotorBase(1, avanzar, 100);
       break;
     case izquierda:
       MotorBase(0, detenerse, 0);
-      MotorBase(1, avanzar, 1);
+      MotorBase(1, avanzar, 100);
       break;
     case derecha:
-      MotorBase(0, avanzar, 1);
+      MotorBase(0, avanzar, 100);
       MotorBase(1, detenerse, 0);
       break;
     case cruce:
@@ -373,8 +373,8 @@ bool CheckUltraSoundStep()
       MotorBase(1, detenerse, 0);
       break;
     case evasion:
-      MotorBase(0, retroceder, 0.5);
-      MotorBase(1, retroceder, 0.5);
+      MotorBase(0, retroceder, 50);
+      MotorBase(1, retroceder, 50);
       break;
     default:
       break;

@@ -4,6 +4,7 @@
 //Esta matriz guarda informacion de los sensores,
 //los primeros dos pines deben ser trigger y echo respectivamente
 // ultrasoundPinPairs [n°deSensor] === {pinTrigger, pinEcho}
+//los sensores deberian setearse horariamente empezando desde la izquierda dando la vuelta completamente
 int ultrasoundPinPairs[3][2] = {
     {7, 8},
     {2, 4},
@@ -63,13 +64,14 @@ enum RobotStatus
 //-detenido (esperando que otro robot pase)
 //-evasión (retrocediendo de otro robot)
 //-buscando linea
+//cada valor indica la urgencia del mismo, y es usado en el CheckUltraSoundStep
 enum RobotActions
 {
-  esperando,
-  moverse,
-  detenido,
-  evasion,
-  buscando,
+  esperando = 0,
+  moverse = 1,
+  detenido = 2,
+  evasion = 3,
+  buscando = 4,
 };
 
 enum RobotDirection
@@ -233,7 +235,8 @@ void ArtificialIntelligence()
 //returns true if the value changed
 bool CheckUltraSoundStep()
 {
-  RobotActions _newState[3];
+  RobotActions _sensorStates[3];
+  RobotActions _newState = esperando;
   //Revisar que los sensores no detecten a otro robot cerca
   //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
   for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
@@ -242,173 +245,178 @@ bool CheckUltraSoundStep()
 
     if (distanciaSensor < distanciaColision)
     {
-      _newState[_iArray] = evasion;
+      _sensorStates[_iArray] = evasion;
     }
     else if (distanciaSensor < distanciaMinima)
     {
-      _newState[_iArray] = detenido;
+      _sensorStates[_iArray] = detenido;
     }
     else
     {
-      _newState[_iArray] = moverse;
+      _sensorStates[_iArray] = moverse;
     }
   }
-  for (int _iArray = 0; _iArray < sizeof(_newState) / sizeof(_newState[_iArray]); _iArray++)
+  for (int _iArray = 0; _iArray < sizeof(_sensorStates) / sizeof(_sensorStates[_iArray]); _iArray++)
   {
-    if (_newState[_iArray] != MyState[objetivo])
+    if (RobotActions(_sensorStates[_iArray]) > RobotActions(_newState))
     {
-      MyState[objetivo] = _newState[_iArray];
-      return true;
+      _newState = _sensorStates[_iArray];
     }
-    else
-    {
-      return false;
-    }
+  }
+  if (_newState == MyState[objetivo])
+  {
+    return false;
+  }
+  else
+  {
+    MyState[objetivo] = _newState;
+    return true;
   }
 }
 
-  //returns true if the value changed
-  bool CheckInfraRedStep()
+//returns true if the value changed
+bool CheckInfraRedStep()
+{
+  bool _results[3] = {};
+  RobotDirection _newState;
+
+  for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
   {
-    bool _results[3] = {};
-    RobotDirection _newState;
+    _results[_iArray] = digitalRead(infraredPins[_iArray]);
+  }
 
-    for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
+  if (!_results[0])
+  {
+    //nada a la izquierda
+    if (!_results[direccion])
     {
-      _results[_iArray] = digitalRead(infraredPins[_iArray]);
-    }
-
-    if (!_results[0])
-    {
-      //nada a la izquierda
-      if (!_results[direccion])
+      //Y nada a la derecha
+      if (_results[1])
       {
-        //Y nada a la derecha
-        if (_results[1])
-        {
-          MyState[direccion] = adelante;
-        }
-        else
-        {
-          MyState[direccion] = perdido;
-        }
+        _newState = adelante;
       }
-
       else
       {
-        MyState[direccion] = derecha;
+        _newState = perdido;
       }
     }
+
     else
     {
-      //algo a la izquierda
-      if (!_results[2])
+      _newState = derecha;
+    }
+  }
+  else
+  {
+    //algo a la izquierda
+    if (!_results[2])
+    {
+      if (_results[1] | !_results[1])
       {
-        if (_results[1] | !_results[1])
-        {
-          MyState[direccion] = izquierda;
-        }
-      }
-
-      else if (_results[1])
-      {
-        MyState[direccion] = cruce;
+        _newState = izquierda;
       }
     }
-    if (_newState != MyState[direccion])
+
+    else if (_results[1])
     {
-      return true;
-    }
-    else
-    {
-      return false;
+      _newState = cruce;
     }
   }
-
-  short UltraSoundPulseCheck(int _pinSet[2])
+  if (_newState != MyState[direccion])
   {
-    digitalWrite(_pinSet[0], HIGH);
-    delayMicroseconds(100);
-
-    digitalWrite(_pinSet[0], LOW);
-
-    short duracionPulso = pulseIn(_pinSet[1], HIGH);
-    return (duracionPulso / sensorConstant);
-
-    //Serial.println(distanciaSensor);
+    MyState[direccion] = _newState;
+    return true;
   }
-
-  void ChangeMotorOrientation()
+  else
   {
-    switch (MyState[direccion])
-    {
-    case adelante:
-      MotorBase(0, avanzar, 100);
-      MotorBase(1, avanzar, 100);
-      break;
-    case izquierda:
-      MotorBase(0, detenerse, 0);
-      MotorBase(1, avanzar, 100);
-      break;
-    case derecha:
-      MotorBase(0, avanzar, 100);
-      MotorBase(1, detenerse, 0);
-      break;
-    case cruce:
-      //aca deberia decidir la IA que camino tomar
-      break;
-    default:
-      break;
-    }
+    return false;
   }
+}
 
-  void ChangeMotorDirection()
+short UltraSoundPulseCheck(int _pinSet[2])
+{
+  digitalWrite(_pinSet[0], HIGH);
+  delayMicroseconds(100);
+
+  digitalWrite(_pinSet[0], LOW);
+
+  short duracionPulso = pulseIn(_pinSet[1], HIGH);
+  return (duracionPulso / sensorConstant);
+
+  //Serial.println(distanciaSensor);
+}
+
+void ChangeMotorOrientation()
+{
+  switch (MyState[direccion])
   {
-    switch (MyState[objetivo])
-    {
-    case moverse:
-      ChangeMotorOrientation();
-      break;
-    case detenido:
-      MotorBase(0, detenerse, 0);
-      MotorBase(1, detenerse, 0);
-      break;
-    case evasion:
-      MotorBase(0, retroceder, 50);
-      MotorBase(1, retroceder, 50);
-      break;
-    default:
-      break;
-    }
+  case adelante:
+    MotorBase(0, avanzar, 100);
+    MotorBase(1, avanzar, 100);
+    break;
+  case izquierda:
+    MotorBase(0, detenerse, 0);
+    MotorBase(1, avanzar, 100);
+    break;
+  case derecha:
+    MotorBase(0, avanzar, 100);
+    MotorBase(1, detenerse, 0);
+    break;
+  case cruce:
+    //aca deberia decidir la IA que camino tomar
+    break;
+  default:
+    break;
   }
+}
 
-  //REVISAR CON MOTOR
-  //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 100%
-  void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
+void ChangeMotorDirection()
+{
+  switch (MyState[objetivo])
   {
-    int _realMotorSpeed = 255 * _motorSpeed/100;
-    //resetea la direccion del motor
-    digitalWrite(motorPins[_motorNumber][0], LOW);
-    digitalWrite(motorPins[_motorNumber][1], LOW);
-
-    //cuando deberia encenderse 0 y cuando 1 depende de cual gire en que dirección.
-    switch (_changeMotorState)
-    {
-    case avanzar:
-      digitalWrite(motorPins[_motorNumber][1], HIGH);
-      analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
-      break;
-
-    case detenerse:
-      analogWrite(motorPins[_motorNumber][2], 0);
-      break;
-
-    case retroceder:
-      digitalWrite(motorPins[_motorNumber][0], HIGH);
-      analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
-      break;
-
-    default:
-      break;
-    }
+  case moverse:
+    ChangeMotorOrientation();
+    break;
+  case detenido:
+    MotorBase(0, detenerse, 0);
+    MotorBase(1, detenerse, 0);
+    break;
+  case evasion:
+    MotorBase(0, retroceder, 50);
+    MotorBase(1, retroceder, 50);
+    break;
+  default:
+    break;
   }
+}
+
+//revisado con TinkerCAD
+//Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 100%
+void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
+{
+  int _realMotorSpeed = 255 * _motorSpeed / 100;
+  //resetea la direccion del motor
+  digitalWrite(motorPins[_motorNumber][0], LOW);
+  digitalWrite(motorPins[_motorNumber][1], LOW);
+
+  //cuando deberia encenderse 0 y cuando 1 depende de cual gire en que dirección.
+  switch (_changeMotorState)
+  {
+  case avanzar:
+    digitalWrite(motorPins[_motorNumber][1], HIGH);
+    analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
+    break;
+
+  case detenerse:
+    analogWrite(motorPins[_motorNumber][2], 0);
+    break;
+
+  case retroceder:
+    digitalWrite(motorPins[_motorNumber][0], HIGH);
+    analogWrite(motorPins[_motorNumber][2], _realMotorSpeed);
+    break;
+
+  default:
+    break;
+  }
+}

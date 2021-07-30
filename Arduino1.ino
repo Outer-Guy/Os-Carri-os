@@ -288,7 +288,7 @@ bool CheckInfraRedStep()
   if (!_results[0])
   {
     //nada a la izquierda
-    if (!_results[direccion])
+    if (!_results[2])
     {
       //Y nada a la derecha
       if (_results[1])

@@ -182,6 +182,8 @@ void loop()
   }
 }
 
+
+
 //returns true if the value changed
 bool CheckInfraRedStep()
 {

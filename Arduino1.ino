@@ -1,5 +1,5 @@
-
-#pragma region PinVariables
+#ifndef Variables
+#define Variables
 //Esta matriz guarda informacion de los sensores,
 //los primeros dos pines deben ser trigger y echo respectivamente
 // ultrasoundPinPairs [n°deSensor] === {pinTrigger, pinEcho}
@@ -86,8 +86,7 @@ enum MotorDirection
   detenerse,
   retroceder,
 };
-
-#pragma endregion
+#endif
 
 // Variable auxiliar para el timer de la medicion de los sensores
 long sensorTimer = 0;
@@ -383,10 +382,10 @@ bool CheckUltraSoundStep()
   }
 
   //REVISAR CON MOTOR
-  //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 1
+  //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 100%
   void MotorBase(int _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
   {
-    int _realMotorSpeed = _motorSpeed * 255;
+    int _realMotorSpeed = 255 * _motorSpeed/100;
     //resetea la direccion del motor
     digitalWrite(motorPins[_motorNumber][0], LOW);
     digitalWrite(motorPins[_motorNumber][1], LOW);

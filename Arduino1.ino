@@ -254,7 +254,7 @@ bool CheckUltraSoundStep()
   }
 }
 //returns true if the value changed
-uint8_t CheckInfraRedStep()
+bool CheckInfraRedStep()
 {
   uint8_t _results[3] = {};
   RobotDirection _newState;
@@ -312,7 +312,7 @@ uint8_t CheckInfraRedStep()
   }
 }
 
-uint8_t UltraSoundPulseCheck(int _pinSet[2])
+bool UltraSoundPulseCheck(int _pinSet[2])
 {
   digitalWrite(_pinSet[0], HIGH);
   delayMicroseconds(100);
@@ -371,7 +371,7 @@ void ChangeMotorDirection()
 
 //revisado con TinkerCAD
 //Usado para cambiar el estado de un motor, el numero es el de la lista de motores, la velocidad es de 0 a 100%
-void MotorBase(uint8_t _motorNumber, MotorDirection _changeMotorState, short _motorSpeed)
+void MotorBase(uint8_t _motorNumber, MotorDirection _changeMotorState, uint8_t _motorSpeed)
 {
   uint8_t _realMotorSpeed = 255 * _motorSpeed / 100;
   //resetea la direccion del motor

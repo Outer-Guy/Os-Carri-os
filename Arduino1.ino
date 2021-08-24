@@ -10,11 +10,8 @@ uint8_t ultrasoundPinPairs[3][2] = {
     {},
     {},
 };
-uint8_t infraredPins[3] = {
-    {11},
-    {12},
-    {13},
-};
+//el orden de los pines deberia ser de izquiera a derecha
+uint8_t infraredPins[3] = {11, 12, 13};
 //Los pines que controlan el motor, el primer pin controla la direccion hacia adelante,
 //el segundo hacia atras, el tercero controla la velocidad y debe ser un PWM
 uint8_t motorPins[2][3] = {
@@ -120,12 +117,12 @@ void setup()
       switch (_tempBool)
       {
       case 0:
-        pinMode(_i, OUTPUT);
+        pinMode(ultrasoundPinPairs[_iArray][_i], OUTPUT);
         _tempBool += 1;
         break;
 
       case 1:
-        pinMode(_i, INPUT);
+        pinMode(ultrasoundPinPairs[_iArray][_i], INPUT);
         _tempBool += 1;
         break;
 
@@ -256,12 +253,15 @@ bool CheckUltraSoundStep()
 //returns true if the value changed
 bool CheckInfraRedStep()
 {
+  Serial.print("pines: ");
   uint8_t _results[3] = {};
   RobotDirection _newState;
 
   for (uint8_t _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
   {
-    _results[_iArray] = digitalRead(infraredPins[_iArray]);
+    _results[_iArray] = !digitalRead(infraredPins[_iArray]);
+    Serial.print(_results[_iArray]);
+    Serial.print(",");
   }
 
   if (!_results[0])
@@ -289,15 +289,12 @@ bool CheckInfraRedStep()
   {
     //algo a la izquierda
     if (!_results[2])
-    {
-      if (_results[1] | !_results[1])
-      {
-        _newState = izquierda;
-      }
+    { //nada a la derecha
+      _newState = izquierda;
     }
-
-    else if (_results[1])
+    else
     {
+      //algo a ambos lados
       _newState = cruce;
     }
   }

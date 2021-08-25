@@ -5,19 +5,14 @@
 //los primeros dos pines deben ser trigger y echo respectivamente
 // ultrasoundPinPairs [n°deSensor] === {pinTrigger, pinEcho}
 //los sensores deberian setearse horariamente empezando desde la izquierda dando la vuelta completamente
-int ultrasoundPinPairs[3][2] = {
-    {7, 8},
-    {2, 4},
-    {12, 13},
-};
-int infraredPins[3] = {
-    {},
+uint8_t ultrasoundPinPairs[2][2] = {
     {},
     {},
 };
+uint8_t infraredPins[3] = {};
 //Los pines que controlan el motor, el primer pin controla la direccion hacia adelante,
 //el segundo hacia atras, el tercero controla la velocidad y debe ser un PWM
-int motorPins[2][3] = {
+uint8_t motorPins[2][3] = {
     {},
     {},
 };
@@ -26,7 +21,7 @@ int motorPins[2][3] = {
 //[0]: Estado del robot visto online
 //[1]: Objetivo del robot, dado por el sensor de ultrasonido evitando otros robots, o moviendose
 //[2]: Dirección como la da el sensor infrarojo
-int MyState[3] = {
+uint8_t MyState[3] = {
     {},
     {},
     {},
@@ -96,13 +91,13 @@ long sensorTimer = 0;
 
 #pragma region TestingVariables
 // Delay entre medición y medición del sensor de ultra sonido
-int sensorTimerDelay = 100;
+uint8_t sensorTimerDelay = 100;
 //Constante de velocidad del sonido m/s
-short sensorConstant = 58.2;
+uint8_t sensorConstant = 58;
 //Distancia minima en centimetros antes de detectar una unidad
-short distanciaMinima = 100;
+uint8_t distanciaMinima = 100;
 //Distancia minima en centimetros antes de considerar un peligro de colision
-short distanciaColision = 50;
+uint8_t distanciaColision = 50;
 #pragma endregion
 
 void setup()
@@ -112,21 +107,21 @@ void setup()
   Serial.println("Inicio: ");
 
   //Sensores de Ultrasonido: Por cada lista en la matriz se revisara los primeros dos valores y los activara como pines
-  for (int _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
+  for (uint8_t _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
   {
-    int _tempBool = 0;
-    for (int _i = 0; _i < sizeof(ultrasoundPinPairs[_iArray]) / sizeof(ultrasoundPinPairs[_iArray][_i]); _i++)
+    uint8_t _tempBool = 0;
+    for (uint8_t _i = 0; _i < sizeof(ultrasoundPinPairs[_iArray]) / sizeof(ultrasoundPinPairs[_iArray][_i]); _i++)
     {
 
       switch (_tempBool)
       {
       case 0:
-        pinMode(_i, OUTPUT);
+        pinMode(ultrasoundPinPairs[_iArray][_i], OUTPUT);
         _tempBool += 1;
         break;
 
       case 1:
-        pinMode(_i, INPUT);
+        pinMode(ultrasoundPinPairs[_iArray][_i], INPUT);
         _tempBool += 1;
         break;
 
@@ -135,7 +130,6 @@ void setup()
       }
     }
   }
-  
   //Sensores infrarojos, cada uno tiene un solo pin
   for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
   {
@@ -182,17 +176,18 @@ void loop()
   }
 }
 
-
-
 //returns true if the value changed
 bool CheckInfraRedStep()
 {
-  bool _results[3] = {};
+  Serial.print("pines: ");
+  uint8_t _results[3] = {};
   RobotDirection _newState;
 
-  for (int _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
+  for (uint8_t _iArray = 0; _iArray < sizeof(infraredPins) / sizeof(infraredPins[_iArray]); _iArray++)
   {
-    _results[_iArray] = digitalRead(infraredPins[_iArray]);
+    _results[_iArray] = !digitalRead(infraredPins[_iArray]);
+    Serial.print(_results[_iArray]);
+    Serial.print(",");
   }
 
   if (!_results[0])
@@ -220,15 +215,12 @@ bool CheckInfraRedStep()
   {
     //algo a la izquierda
     if (!_results[2])
-    {
-      if (_results[1] | !_results[1])
-      {
-        _newState = izquierda;
-      }
+    { //nada a la derecha
+      _newState = izquierda;
     }
-
-    else if (_results[1])
+    else
     {
+      //algo a ambos lados
       _newState = cruce;
     }
   }
@@ -243,15 +235,76 @@ bool CheckInfraRedStep()
   }
 }
 
-short UltraSoundPulseCheck(int _pinSet[2])
+//returns true if the value changed
+bool CheckUltraSoundStep()
 {
-  digitalWrite(_pinSet[0], HIGH);
+  RobotActions _newState = esperando;
+  uint8_t _distanciaFinal = 255;
+
+  //Revisar que los sensores no detecten a otro robot cerca
+  //por cada sensor de ultrasonido en la matriz, revisar del primero al ultimogu
+  for (uint8_t _iArray = 0; _iArray < sizeof(ultrasoundPinPairs) / sizeof(ultrasoundPinPairs[_iArray]); _iArray++)
+  {
+    uint8_t distanciaSensor = UltraSoundPulseCheck(_iArray);
+    Serial.print(distanciaSensor);
+    Serial.print(", ");
+    if (distanciaSensor < _distanciaFinal)
+    {
+      Serial.print("(");
+      Serial.print(distanciaSensor);
+      Serial.print("<");
+      Serial.print(_distanciaFinal);
+      Serial.println(")");
+      _distanciaFinal = distanciaSensor;
+      Serial.println(_distanciaFinal);
+    }
+  }
+  Serial.print("Final; ");
+  Serial.print(_distanciaFinal);
+
+  if (_distanciaFinal < distanciaColision)
+  {
+    _newState = evasion;
+  }
+  else if (_distanciaFinal < distanciaMinima)
+  {
+    _newState = detenido;
+  }
+  else
+  {
+    _newState = moverse;
+  }
+
+  if (_newState == MyState[objetivo])
+  {
+    return false;
+  }
+  else
+  {
+    MyState[objetivo] = _newState;
+    return true;
+  }
+}
+
+uint8_t UltraSoundPulseCheck(uint8_t _pinPair)
+{
+
+  digitalWrite(ultrasoundPinPairs[_pinPair][0], HIGH);
   delayMicroseconds(100);
 
-  digitalWrite(_pinSet[0], LOW);
+  digitalWrite(ultrasoundPinPairs[_pinPair][0], LOW);
 
-  short duracionPulso = pulseIn(_pinSet[1], HIGH);
-  return (duracionPulso / sensorConstant);
+  uint16_t duracionPulso = pulseIn(ultrasoundPinPairs[_pinPair][1], HIGH);
+
+  duracionPulso = duracionPulso / sensorConstant;
+  if (duracionPulso < 255)
+  {
+    return (duracionPulso);
+  }
+  else
+  {
+    return (255);
+  }
 
   //Serial.println(distanciaSensor);
 }
